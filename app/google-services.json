@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "885800903131",
+    "project_id": "werewolfarena-80d3b",
+    "storage_bucket": "werewolfarena-80d3b.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:885800903131:android:440d0c809c90f7a9d3c7fe",
+        "android_client_info": {
+          "package_name": "com.ait.onenightwerewolf"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "885800903131-io7ses3uti1rl6a597lnhmiq65t0uilc.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBEwVRAHobSHVih38__cDnAIj50ZPO0jB8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "885800903131-io7ses3uti1rl6a597lnhmiq65t0uilc.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
