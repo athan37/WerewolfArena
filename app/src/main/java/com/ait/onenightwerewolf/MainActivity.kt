@@ -11,12 +11,33 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
 import com.ait.onenightwerewolf.model.WerewolfViewModel
 import com.ait.onenightwerewolf.ui.screens.OneNightWerewolf
 import com.ait.onenightwerewolf.ui.theme.OneNightWerewolfTheme
+import java.util.*
+
+class WerewolfViewModelFactory(
+    private val roomId: String
+) : ViewModelProvider.Factory {
+
+    private val playerId = UUID.randomUUID().toString()
+
+    override fun <T : ViewModel?> create(modelClass: Class<T>): T {
+        if (modelClass.isAssignableFrom(WerewolfViewModel::class.java)) {
+            @Suppress("UNCHECKED_CAST")
+            return WerewolfViewModel(roomId, playerId) as T
+        }
+        throw IllegalArgumentException("Unknown ViewModel class")
+    }
+}
 
 class MainActivity : ComponentActivity() {
-    private val viewModel: WerewolfViewModel by viewModels()
+    private val viewModel: WerewolfViewModel by viewModels {
+        // Replace "roomId" and "playerId" with actual values
+        WerewolfViewModelFactory("roomId")
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)

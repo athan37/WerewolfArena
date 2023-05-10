@@ -7,30 +7,36 @@ import androidx.compose.material3.TextField
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.ait.onenightwerewolf.model.WerewolfViewModel
 
 @Composable
-fun ChatUI(modifier: Modifier = Modifier) {
-    val messages = remember { mutableStateListOf<String>() }
+fun ChatUI(viewModel: WerewolfViewModel, modifier: Modifier = Modifier) {
+    var messages by remember { mutableStateOf(listOf<Pair<String, String>>()) }
 
-    Column(modifier = modifier.fillMaxSize()) {
+    LaunchedEffect(Unit) {
+        viewModel.listenToMessages { playerName, newMessage ->
+            messages = messages + Pair(playerName, newMessage)
+        }
+    }
+
+    Column(modifier = modifier) {
         MessagesList(messages, modifier = Modifier.weight(1f))
-        MessageInput(onSendMessage = { message ->
-            messages.add(message)
-        })
+        MessageInput { message ->
+            viewModel.sendMessage(message)
+        }
     }
 }
-
 @Composable
-fun MessageItem(message: String) {
-    Text(message, modifier = Modifier.padding(8.dp))
+fun MessageItem(playerName: String, message: String) {
+    Text(text = "$playerName: $message")
 }
 
 
 @Composable
-fun MessagesList(messages: List<String>, modifier: Modifier = Modifier) {
+fun MessagesList(messages: List<Pair<String, String>>, modifier: Modifier = Modifier) {
     LazyColumn(modifier = modifier) {
-        items(messages) { message ->
-            MessageItem(message)
+        items(messages) { (playerName, message) ->
+            MessageItem(playerName, message)
         }
     }
 }

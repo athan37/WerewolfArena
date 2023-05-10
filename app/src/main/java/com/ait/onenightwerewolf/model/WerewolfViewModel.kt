@@ -4,7 +4,16 @@ import Team
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.lifecycle.LiveData
+import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
+import com.ait.onenightwerewolf.model.server.*
+import com.google.firebase.database.ChildEventListener
+import com.google.firebase.database.DataSnapshot
+import com.google.firebase.database.DatabaseError
+import com.google.firebase.database.FirebaseDatabase
+import com.google.firebase.database.ktx.getValue
+import java.util.*
 
 enum class GameState {
     SETUP, NIGHT, DAY, VOTE, GAME_OVER
@@ -12,7 +21,9 @@ enum class GameState {
 
 data class NightAction(val playerId: Int, val targetPlayerId: Int? = null, val targetPlayerId2: Int? = null)
 
-class WerewolfViewModel : ViewModel() {
+class WerewolfViewModel(
+    private val roomId: String, private val playerId: String
+) : ViewModel() {
     val winningTeam = mutableStateOf<Team?>(null)
 
     // ...
@@ -26,6 +37,57 @@ class WerewolfViewModel : ViewModel() {
 
     val chatEnabled = mutableStateOf(false)
     val roleInformation = mutableStateOf<String?>(null)
+
+    //Game room
+    private val _gameRoom = MutableLiveData<GameRoom?>(null)
+    val gameRoom: LiveData<GameRoom?> = _gameRoom
+
+    private val _currentPlayer = MutableLiveData<Player?>(null)
+    val currentPlayer: Player? get() = _currentPlayer.value
+
+    private val _messages = MutableLiveData<List<Message>>(emptyList())
+    val messages: LiveData<List<Message>> = _messages
+
+    private val server = WerewolfServer()
+    private val _gameState = MutableLiveData<GameState>()
+
+    private val firebaseDatabase = FirebaseDatabase.getInstance()
+    private val chatMessagesRef = firebaseDatabase.getReference("rooms/$roomId/chat")
+
+
+    init {
+        // Listen to server for player's role, messages, and game state changes
+        server.listenToPlayerRole(roomId, playerId) { updatedRole ->
+            _currentPlayer.postValue(_currentPlayer.value?.copy(role = updatedRole))
+        }
+
+        server.listenToMessages(roomId) { updatedMessages ->
+            _messages.postValue(updatedMessages)
+        }
+
+        server.listenToGameState(roomId) { updatedGameState ->
+            _gameState.postValue(updatedGameState)
+        }
+    }
+
+    fun createGameRoom(playerName: String) {
+        val playerId = UUID.randomUUID().toString()
+        val player = Player(id = playerId.toInt(), name = playerName, role = Role.Villager, level = 1)
+
+        val roomCode = generateRoomCode()
+        val roomId = UUID.randomUUID().toString()
+        val room = GameRoom(id = roomId, code = roomCode, players = listOf(player))
+
+        createGameRoom(room)
+        listenToGameRoomUpdates(roomId) { updatedRoom ->
+            _gameRoom.value = updatedRoom
+        }
+    }
+
+    private fun generateRoomCode(): String {
+        return "1"
+    }
+
 
     // Add more game logic and state management methods
     fun onRoleAction(player: Player) {
@@ -53,7 +115,7 @@ class WerewolfViewModel : ViewModel() {
             }
             GameState.GAME_OVER -> {
                 gameOverActions()
-                gameState.value = GameState.SETUP
+//                gameState.value = GameState.SETUP
             }
         }
     }
@@ -134,7 +196,7 @@ class WerewolfViewModel : ViewModel() {
 
     private fun getSwappedRoles(player: Player): String {
         val action = nightActions.find { it.playerId == player.id }
-        return if (action != null && action.targetPlayerId != null && action.targetPlayerId2 != null) {
+        return if (action?.targetPlayerId != null && action.targetPlayerId2 != null) {
             "Player ${action.targetPlayerId} and Player ${action.targetPlayerId2}"
         } else {
             "No roles swapped"
@@ -143,7 +205,7 @@ class WerewolfViewModel : ViewModel() {
 
     private fun getSwappedRole(player: Player): String {
         val action = nightActions.find { it.playerId == player.id }
-        return if (action != null && action.targetPlayerId != null) {
+        return if (action?.targetPlayerId != null) {
             val targetPlayer = _players.find { it.id == action.targetPlayerId }
             "Role: ${targetPlayer?.role?.toString() ?: "Unknown"}"
         } else {
@@ -153,7 +215,7 @@ class WerewolfViewModel : ViewModel() {
 
     private fun getPeekedRole(player: Player): String {
         val action = nightActions.find { it.playerId == player.id }
-        return if (action != null && action.targetPlayerId != null) {
+        return if (action?.targetPlayerId != null) {
             val targetPlayer = _players.find { it.id == action.targetPlayerId }
             "Role: ${targetPlayer?.role?.toString() ?: "Unknown"}"
         } else {
@@ -208,6 +270,26 @@ class WerewolfViewModel : ViewModel() {
             player.role = shuffledRoles[index]
         }
     }
-    
-    
+
+
+    fun sendMessage(message: String) {
+        chatMessagesRef.push().setValue(mapOf("playerId" to playerId, "message" to message))
+    }
+
+    fun listenToMessages(onNewMessage: (String, String) -> Unit) {
+        chatMessagesRef.addChildEventListener(object : ChildEventListener {
+            override fun onChildAdded(snapshot: DataSnapshot, previousChildName: String?) {
+                val messageData = snapshot.getValue<Map<String, String>>()
+                val playerId = messageData?.get("playerId") ?: "Unknown"
+                val message = messageData?.get("message") ?: ""
+                onNewMessage(playerId, message)
+            }
+
+            override fun onChildChanged(snapshot: DataSnapshot, previousChildName: String?) {}
+            override fun onChildRemoved(snapshot: DataSnapshot) {}
+            override fun onChildMoved(snapshot: DataSnapshot, previousChildName: String?) {}
+            override fun onCancelled(error: DatabaseError) {}
+        })
+    }
+
 }

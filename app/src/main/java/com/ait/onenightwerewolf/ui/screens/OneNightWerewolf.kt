@@ -12,6 +12,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.ait.onenightwerewolf.model.*
+import kotlinx.coroutines.delay
 
 @Composable
 fun OneNightWerewolf(viewModel: WerewolfViewModel) {
@@ -29,7 +30,12 @@ fun OneNightWerewolf(viewModel: WerewolfViewModel) {
                     CreatePlayerDialog(
                         showDialog = viewModel.showDialog.value,
                         onCreatePlayer = { name ->
-                            val newPlayer = Player(id = viewModel.players.size, name = name, role = assignRandomRole(allRoles.toMutableList()), level = 1)
+                            val newPlayer = Player(
+                                id = viewModel.players.size,
+                                name = name,
+                                role = assignRandomRole(allRoles.toMutableList(), viewModel.players),
+                                level = 1
+                            )
                             viewModel._players.add(newPlayer)
                             viewModel.showDialog.value = false
                         },
@@ -74,9 +80,15 @@ fun OneNightWerewolf(viewModel: WerewolfViewModel) {
 
 }
 
-fun assignRandomRole(availableRoles: MutableList<Role>): Role {
+fun assignRandomRole(availableRoles: MutableList<Role>, players: List<Player>): Role {
     val index = (0 until availableRoles.size).random()
-    val role = availableRoles[index]
+    var role = availableRoles[index]
+
+    while (players.any { it.role == role }) {
+        val newIndex = (0 until availableRoles.size).random()
+        role = availableRoles[newIndex]
+    }
+
     availableRoles.removeAt(index)
     return role
 }
@@ -92,9 +104,10 @@ fun PlayerList(players: List<Player>) {
 
 @Composable
 fun NightPhaseUI(viewModel: WerewolfViewModel) {
-    // Show role actions for each player based on their role
-    // This is just an example; you may need to create separate Composables for each role's action
-    Text(text = viewModel.roleInformation.value ?: "No information available.")
+    val currentPlayer = viewModel.currentPlayer // Get the current device's player
+    if (currentPlayer != null && currentPlayer.role is Role.Werewolf) {
+        Text(text = viewModel.roleInformation.value ?: "No information available.")
+    }
 }
 
 @Composable
@@ -103,9 +116,7 @@ fun DayPhaseUI(viewModel: WerewolfViewModel) {
     Column(modifier = Modifier.fillMaxSize()) {
         Text("Day Phase", modifier = Modifier.padding(16.dp))
 
-        if (viewModel.chatEnabled.value) {
-            ChatUI(modifier = Modifier.weight(1f))
-        }
+        ChatUI(viewModel, modifier = Modifier.weight(1f))
 
         Spacer(modifier = Modifier.height(16.dp))
 
@@ -116,6 +127,13 @@ fun DayPhaseUI(viewModel: WerewolfViewModel) {
             ) {
                 Text("Next Phase")
             }
+        }
+    }
+
+    LaunchedEffect(key1 = viewModel.gameState.value) {
+        if (viewModel.gameState.value == GameState.DAY) {
+            delay(4000L) // Wait for 15 seconds
+            viewModel.onTransitionToNextPhase()
         }
     }
 }
