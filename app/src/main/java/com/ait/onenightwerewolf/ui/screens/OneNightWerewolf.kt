@@ -11,6 +11,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.ait.onenightwerewolf.model.*
 import kotlinx.coroutines.delay
 
@@ -41,11 +42,14 @@ fun OneNightWerewolf(viewModel: WerewolfViewModel) {
                         },
                         onCancel = { viewModel.showDialog.value = false }
                     )
-
-                    FloatingActionButton(
-                        onClick = { viewModel.showDialog.value = true },
-                        content = { Icon(Icons.Default.Add, contentDescription = "Add Player") }
-                    )
+                    Box(
+                        modifier = Modifier.padding(15.dp).align(Alignment.End)
+                    ) {
+                        FloatingActionButton(
+                            onClick = { viewModel.showDialog.value = true },
+                            content = { Icon(Icons.Default.Add, contentDescription = "Add Player") }
+                        )
+                    }
                 }
                 GameState.NIGHT -> {
                     // Display night phase UI
@@ -71,7 +75,7 @@ fun OneNightWerewolf(viewModel: WerewolfViewModel) {
                     onClick = { viewModel.onTransitionToNextPhase() },
                     modifier = Modifier.align(Alignment.Center)
                 ) {
-                    Text("Next Phase")
+                    Text("Next Phase", fontSize = 18.sp)
                 }
             }
         }
